@@ -1,0 +1,14 @@
+account,type,ticker,sleeve,shares,avg_cost,price,note
+Brokerage,Taxable,VTI,US,40,280.00,300.00,Core US
+Brokerage,Taxable,VXUS,Intl,80,60.00,65.00,Core international
+Brokerage,Taxable,SGOV,T-bills,50,100.00,100.00,Dry powder
+Brokerage,Taxable,AAPL,US,5,210.00,230.00,Value sleeve example
+Brokerage,Taxable,CASH,Cash,650,,1,
+401(k),Retirement,VTI,US,30,260.00,300.00,
+401(k),Retirement,VXUS,Intl,60,58.00,65.00,
+401(k),Retirement,GLDM,Gold,40,55.00,62.50,
+401(k),Retirement,SGOV,T-bills,25,100.00,100.00,
+401(k),Retirement,CASH,Cash,100,,1,
+Roth IRA,Retirement,VTI,US,10,270.00,300.00,
+Roth IRA,Retirement,IBIT,Satellites,40,45.00,50.00,Satellite example
+Twin Turbo sandbox (IBKR),Taxable,TWIN-TURBO,Satellites,3000,,1,Momentum agent sandbox: value only (see Twin Turbo repo)
