@@ -1,0 +1,154 @@
+<title>Mission Control Snapshot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of stacked panels — totals, mix vs target, accounts, positions, open items */
+:root{
+  --bg:#f5f7f8; --panel:#ffffff; --fg:#14202b; --muted:#5d6b78; --line:#dde3e8;
+  --accent:#1f6f8b; --track:#e8edf1;
+  --us:#1f6f8b; --intl:#4f9d69; --gold:#c9a227; --sgov:#8a96a3; --sat:#8b5cf6; --cash:#c5cdd5;
+  --good:#2f855a; --warn:#b7791f; --bad:#c05656;
+  --display:"Instrument Sans",system-ui,sans-serif; --body:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161c; --panel:#16212a; --fg:#e6edf2; --muted:#93a3b1; --line:#27343f; --accent:#5fb3d1; --track:#22303b;
+  --us:#4aa3c4; --intl:#6cc08a; --gold:#e0bb45; --sgov:#7d8a97; --sat:#a78bfa; --cash:#46535f;
+  --good:#5cc08a; --warn:#e2a948; --bad:#e07a7a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161c; --panel:#16212a; --fg:#e6edf2; --muted:#93a3b1; --line:#27343f; --accent:#5fb3d1; --track:#22303b;
+  --us:#4aa3c4; --intl:#6cc08a; --gold:#e0bb45; --sgov:#7d8a97; --sat:#a78bfa; --cash:#46535f;
+  --good:#5cc08a; --warn:#e2a948; --bad:#e07a7a; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 48px;display:grid;gap:20px}
+h1{font-family:var(--display);font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 14px;font-weight:600}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi .l{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kpi .v{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:2px}
+.kpi .s{font-size:13px;color:var(--muted)}
+.mix{display:grid;gap:12px}
+.mrow{display:grid;grid-template-columns:96px 1fr 150px;gap:12px;align-items:center}
+.mname{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.dot{width:10px;height:10px;border-radius:3px;flex:none}
+.track{position:relative;height:16px;background:var(--track);border-radius:4px}
+.fill{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.tgt{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg)}
+.mval{font-size:13px;text-align:right}
+.gap{display:block;font-size:12px}
+.up{color:var(--good)} .down{color:var(--bad)} .ok{color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:14px}
+.legend span{display:flex;align-items:center;gap:6px}
+.accts{display:grid;gap:14px}
+.arow{display:grid;grid-template-columns:200px 1fr 110px;gap:12px;align-items:center}
+.aname{font-weight:600;font-size:14px}.aname small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.stack{display:flex;height:22px;border-radius:4px;overflow:hidden;background:var(--track)}
+.stack i{display:block;height:100%}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:7px 10px;border-bottom:1px solid var(--line)}
+td.r,th.r{text-align:right}
+tr.grp td{font-weight:700;background:var(--track);border-bottom:none}
+.items{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.items li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.pill{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.foot{font-size:12px;color:var(--muted)}
+@media (max-width:640px){
+  .mrow{grid-template-columns:80px 1fr;}.mval{grid-column:2;text-align:left}
+  .arow{grid-template-columns:1fr}.split{grid-template-columns:1fr}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 id="h1">Mission Control</h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="panel">
+    <h2>Household mix vs target</h2>
+    <div class="mix" id="mix"></div>
+    <div class="legend"><span><i class="dot" style="background:var(--fg);width:2px;height:12px;border-radius:0"></i>Target</span><span>Bar length = share of household now</span></div>
+  </section>
+
+  <section class="split">
+    <div class="panel">
+      <h2>Taxable vs retirement</h2>
+      <div class="accts" id="types"></div>
+    </div>
+    <div class="panel">
+      <h2>What needs a decision</h2>
+      <ul class="items" id="items"></ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Accounts</h2>
+    <div class="accts" id="accts"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Every position</h2>
+    <div class="tbl"><table id="pos"><thead><tr><th>Holding</th><th>Sleeve</th><th class="r">Shares</th><th class="r">Value</th><th class="r">% of total</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <p class="foot">Research only — you decide every trade. Values round to the dollar. Built with Mission Control (github.com/OmarTokens/mission-control).</p>
+</div>
+
+<script>
+const D=__DATA__;
+const SLEEVES=[
+  {k:"US",c:"--us",note:"SPUS, SCHG, value names"},
+  {k:"Intl",c:"--intl",note:"UMMA"},
+  {k:"Gold",c:"--gold",note:"GLDM"},
+  {k:"T-bills",c:"--sgov",note:"SGOV / T-bills"},
+  {k:"Satellites",c:"--sat",note:"IBIT, SPCX, crypto, silver, Roth high-upside"},
+  {k:"Cash",c:"--cash",note:"uninvested"}
+].map(s=>({...s,t:D.targets[s.k]||0}));
+const A=D.accounts;
+document.getElementById("sub").textContent=D.sub;if(D.title)document.getElementById("h1").textContent=D.title;
+const fmt=v=>"$"+Math.round(v).toLocaleString("en-US");
+const k=v=>"$"+(v/1000).toFixed(1)+"K";
+const pct=v=>(v*100).toFixed(1)+"%";
+const col=c=>`var(${c})`;
+const sc=Object.fromEntries(SLEEVES.map(s=>[s.k,s.c]));
+let total=0; const bySl={}, byType={Taxable:{},Retirement:{}}, typeTot={Taxable:0,Retirement:0};
+A.forEach(a=>{a.tot=0;a.p.forEach(([t,s,sh,v])=>{a.tot+=v;total+=v;bySl[s]=(bySl[s]||0)+v;byType[a.type][s]=(byType[a.type][s]||0)+v;typeTot[a.type]+=v;});});
+
+const dry=(bySl["T-bills"]||0)+(bySl.Cash||0);
+document.getElementById("kpis").innerHTML=[
+ ["Household total",fmt(total),A.length+" accounts"],
+ ["Taxable",fmt(typeTot.Taxable),pct(typeTot.Taxable/total)+" of total"],
+ ["Retirement",fmt(typeTot.Retirement),pct(typeTot.Retirement/total)+" of total"],
+ ["Cash + T-bills",fmt(dry),pct(dry/total)+" not yet in stocks"]
+].map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+const maxShare=Math.max(...SLEEVES.map(s=>Math.max((bySl[s.k]||0)/total,s.t)));
+document.getElementById("mix").innerHTML=SLEEVES.map(s=>{
+  const now=(bySl[s.k]||0)/total, gapv=s.t*total-(bySl[s.k]||0), w=now/maxShare*100, tw=s.t/maxShare*100;
+  const g=Math.abs(now-s.t)<=(D.drift||.05)?`<span class="gap ok">on target</span>`:gapv>0?`<span class="gap up">${k(gapv)} below target</span>`:`<span class="gap down">${k(-gapv)} above target</span>`;
+  return `<div class="mrow"><div class="mname"><i class="dot" style="background:${col(s.c)}"></i>${s.k}</div>
+  <div class="track" title="${s.note}"><div class="fill" style="width:${w}%;background:${col(s.c)}"></div><div class="tgt" style="left:calc(${tw}% - 1px)"></div></div>
+  <div class="mval"><span class="num">${pct(now)}</span> <span style="color:var(--muted)">vs ${Math.round(s.t*100)}%</span>${g}</div></div>`;}).join("");
+
+const stack=obj=>SLEEVES.filter(s=>obj[s.k]).map(s=>`<i style="width:${obj[s.k]/Object.values(obj).reduce((a,b)=>a+b,0)*100}%;background:${col(s.c)}" title="${s.k} ${fmt(obj[s.k])}"></i>`).join("");
+document.getElementById("types").innerHTML=["Taxable","Retirement"].map(t=>`<div class="arow" style="grid-template-columns:1fr"><div class="aname">${t} <small class="num">${fmt(typeTot[t])} · ${SLEEVES.filter(s=>byType[t][s.k]).map(s=>s.k+" "+Math.round(byType[t][s.k]/typeTot[t]*100)+"%").join(" · ")}</small></div><div class="stack">${stack(byType[t])}</div></div>`).join("");
+
+document.getElementById("accts").innerHTML=A.map(a=>{const o={};a.p.forEach(([t,s,sh,v])=>o[s]=(o[s]||0)+v);
+ return `<div class="arow"><div class="aname">${a.n}<small>${a.type} · ${a.src}</small></div><div class="stack">${stack(o)}</div><div class="num" style="text-align:right">${fmt(a.tot)}</div></div>`;}).join("");
+document.getElementById("legend").innerHTML=SLEEVES.map(s=>`<span><i class="dot" style="background:${col(s.c)}"></i>${s.k}</span>`).join("");
+
+document.querySelector("#pos tbody").innerHTML=A.map(a=>`<tr class="grp"><td colspan="3">${a.n}</td><td class="r num">${fmt(a.tot)}</td><td class="r num">${pct(a.tot/total)}</td></tr>`+
+ a.p.map(([t,s,sh,v])=>`<tr><td>${t}</td><td><span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="background:${col(sc[s])}"></i>${s}</span></td><td class="r num">${sh==null?"—":sh.toLocaleString("en-US",{maximumFractionDigits:2})}</td><td class="r num">${fmt(v)}</td><td class="r num">${pct(v/total)}</td></tr>`).join("")).join("");
+
+const ITEMS=D.items;
+document.getElementById("items").innerHTML=ITEMS.map(([s,l,t])=>`<li><span class="pill" style="color:var(${s==="warn"?"--warn":"--accent"})">${l}</span><span>${t}</span></li>`).join("");
+</script>
