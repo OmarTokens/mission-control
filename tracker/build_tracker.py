@@ -1,7 +1,7 @@
 """Mission Control tracker builder.
 
 Builds a Google-Sheets-ready workbook (.xlsx) from your holdings + targets CSVs:
-  Dashboard · Holdings · Control Center · Value Sleeve · Watchlist · Daily Log · History
+  Dashboard · Holdings · Projection · Control Center · Value Sleeve · Watchlist · Daily Log · History
 
 Prices are live once imported into Google Sheets (GOOGLEFINANCE formulas). The CSV price is only a fallback.
 
@@ -79,13 +79,15 @@ DIALS = [("Drift band (pts)", 0.05, "If a sleeve is this far off target, the dai
          ("Value zone: max P/E", 20, "…AND the P/E is at or below this (ETFs flag on price only)", ""),
          ("Watch: min drop from 52w high", 0.20, "WATCH flag threshold", ""),
          ("Loss-harvest trigger", -0.20, "Value Sleeve flags HARVEST? when a name is down this much", "Mind the 30-day wash-sale rule across ALL accounts"),
+         ("Harvest: min $ loss", 300, "tools/harvest_check.py only flags a taxable holding when the loss is at least this many dollars", "Small losses aren't worth 31 days out of the position"),
+         ("Dip rule: S&P drop from high", 0.05, "If the S&P closes this far below its high, the next planned buy date is pulled forward", "One buy date per drop"),
          ("Satellite cap per name", 5000, "Max $ in any one satellite", ""),
          ("Exclusions", "e.g. sectors you never want", "Agent never recommends these", ""),
          ("Email recipients", "you@example.com", "Daily + weekly notes go only here", "")]
 DIAL = {}
 for i, (d, v, what, note) in enumerate(DIALS):
     r = D0 + 1 + i; DIAL[d] = f"'Control Center'!$B${r}"
-    f = USD if isinstance(v, int) and v > 100 else (PCT0 if isinstance(v, float) else None)
+    f = USD if isinstance(v, int) and v >= 100 else (PCT0 if isinstance(v, float) else None)
     put(cc, r, 1, d, bold=True, border=True, wrap=True); put(cc, r, 2, v, f, fl=F_EDIT, border=True, wrap=True)
     put(cc, r, 3, what, wrap=True, border=True); put(cc, r, 4, note, wrap=True, border=True)
 S0 = D0 + len(DIALS) + 3
@@ -132,6 +134,71 @@ put(ho, HN + 4, 1, "Sleeve must match a row on Control Center (" + " · ".join(t
 ho.freeze_panes = "A5"
 rng = lambda c: f"Holdings!${c}${H0}:${c}${HN}"
 HR, HT, HTK, HS, HV, HG = rng('A'), rng('B'), rng('C'), rng('D'), rng('H'), rng('I')
+
+
+# ============================================================ PROJECTION
+# Lognormal projection from today's mix (or your targets). All formulas: it moves as prices and Holdings change.
+ASSUME = {"US": (0.065, 0.16), "Intl": (0.074, 0.17), "Gold": (0.035, 0.15), "T-bills": (0.032, 0.005),
+          "Satellites": (0.08, 0.45), "Cash": (0.025, 0.001)}
+EQ = {"US", "Intl", "Satellites"}
+def corr(x, y):
+    if x == y: return 1
+    pair = {x, y}
+    if pair == {"US", "Intl"}: return 0.8
+    if pair <= EQ: return 0.5 if "Satellites" in pair else 0.8
+    if "Gold" in pair and pair & EQ: return 0.15
+    return 0
+pj = wb.create_sheet("Projection")
+SLP = [t['sleeve'] for t in TARG]; n = len(SLP)
+widths(pj, [34, 14, 14, 14, 16] + [12] * (n + 2))
+put(pj, 1, 1, "PROJECTION: where the household could be, from today's holdings", bold=True, size=16)
+put(pj, 2, 1, "Updates by itself when prices or Holdings change. Yellow cells are assumptions you can edit. Bad / Good = worst and best 5% of outcomes. Not a forecast; no new money added.", color=MUTED, size=9)
+header(pj, 4, 1, ["Sleeve", "Return / yr", "Volatility", "Weight now", "Target weight"])
+for i, sname in enumerate(SLP):
+    r = 5 + i; mu, vol = ASSUME.get(sname, (0.06, 0.15))
+    put(pj, r, 1, sname, bold=True, border=True); put(pj, r, 2, mu, PCT, fl=F_EDIT, border=True); put(pj, r, 3, vol, PCT, fl=F_EDIT, border=True)
+    pj.cell(r, 4).value = f'=IFERROR(SUMIF({HS},$A{r},{HV})/SUM({HV}),0)'; pj.cell(r, 5).value = f'={TGT[sname]}'
+    fmtcells(pj, r, (4, 5), (PCT, PCT))
+RN = 5 + n - 1
+C0 = RN + 2
+put(pj, C0, 1, "How the sleeves move together (correlation, editable)", bold=True)
+for j, sname in enumerate(SLP): put(pj, C0 + 1, 2 + j, sname, bold=True, size=9)
+for i, a_ in enumerate(SLP):
+    put(pj, C0 + 2 + i, 1, a_, bold=True, size=9)
+    for j, b_ in enumerate(SLP): put(pj, C0 + 2 + i, 2 + j, corr(a_, b_), '0.00', fl=F_EDIT, size=9)
+K0 = C0 + 2 + n + 1
+put(pj, K0 - 1, 1, "Covariance (calculated)", color=MUTED, size=9)
+lc = L(2 + n - 1)
+for i in range(n):
+    for j in range(n):
+        pj.cell(K0 + i, 2 + j).value = f"={L(2+j)}{C0+2+i}*$C${5+i}*$C${5+j}"
+        pj.cell(K0 + i, 2 + j).font = Font(name="Roboto", size=8, color="9CA3AF")
+    pj.cell(K0 + i, 2 + n).value = f"=MMULT(B{K0+i}:{lc}{K0+i},$D$5:$D${RN})"
+    pj.cell(K0 + i, 3 + n).value = f"=MMULT(B{K0+i}:{lc}{K0+i},$E$5:$E${RN})"
+    for c in (2 + n, 3 + n): pj.cell(K0 + i, c).font = Font(name="Roboto", size=8, color="9CA3AF")
+KN = K0 + n - 1; HC, TC = L(2 + n), L(3 + n)
+S0p = KN + 2
+header(pj, S0p, 1, ["", "Today's mix", "At targets"])
+for k, lab in enumerate(["Starting value (Holdings total)", "Expected return / yr", "Volatility (typical yearly swing)", "Growth rate used (after volatility drag)"]):
+    put(pj, S0p + 1 + k, 1, lab, border=True)
+r1, r2, r3, r4 = S0p + 1, S0p + 2, S0p + 3, S0p + 4
+pj.cell(r1, 2).value = f"=SUM({HV})"; pj.cell(r1, 3).value = f"=B{r1}"
+pj.cell(r2, 2).value = f"=SUMPRODUCT($B$5:$B${RN},D5:D{RN})"; pj.cell(r2, 3).value = f"=SUMPRODUCT($B$5:$B${RN},E5:E{RN})"
+pj.cell(r3, 2).value = f"=SQRT(SUMPRODUCT(D5:D{RN},{HC}{K0}:{HC}{KN}))"; pj.cell(r3, 3).value = f"=SQRT(SUMPRODUCT(E5:E{RN},{TC}{K0}:{TC}{KN}))"
+pj.cell(r4, 2).value = f"=LN(1+B{r2})-B{r3}^2/2"; pj.cell(r4, 3).value = f"=LN(1+C{r2})-C{r3}^2/2"
+fmtcells(pj, r1, (2, 3), (USD, USD))
+for rr in (r2, r3, r4): fmtcells(pj, rr, (2, 3), ('0.00%', '0.00%'))
+T0 = r4 + 2
+header(pj, T0, 1, ["Years from today", "Bad (5%)", "Middle", "Good (95%)", "Middle at targets"])
+for y in range(11):
+    r = T0 + 1 + y; put(pj, r, 1, y, border=True)
+    pj.cell(r, 2).value = f"=$B${r1}*EXP($B${r4}*$A{r}-1.645*$B${r3}*SQRT($A{r}))"
+    pj.cell(r, 3).value = f"=$B${r1}*EXP($B${r4}*$A{r})"
+    pj.cell(r, 4).value = f"=$B${r1}*EXP($B${r4}*$A{r}+1.645*$B${r3}*SQRT($A{r}))"
+    pj.cell(r, 5).value = f"=$C${r1}*EXP($C${r4}*$A{r})"
+    fmtcells(pj, r, (2, 3, 4, 5), (USD, USD, USD, USD), bold=(3,))
+put(pj, T0 + 13, 1, f"chart range: A{T0}:E{T0+11} (Mission Control → Set up charts draws it)", size=8, color=MUTED)
+pj.freeze_panes = "A4"
 
 # ============================================================ VALUE SLEEVE
 vs = wb.create_sheet("Value Sleeve")
