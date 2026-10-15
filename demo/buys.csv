@@ -1,0 +1,5 @@
+date,account,ticker,shares,drip
+2026-09-15,Brokerage,VXUS,30,no
+2026-09-28,401(k),VXUS,10,no
+2026-10-01,Roth IRA,IBIT,10,no
+2026-10-06,401(k),SGOV,0.12,yes

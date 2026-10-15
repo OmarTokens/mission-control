@@ -1,0 +1,6 @@
+account,ticker,date,shares,cost
+Brokerage,VTI,2025-06-02,40,280.00
+Brokerage,VXUS,2026-03-02,50,62.00
+Brokerage,VXUS,2026-09-15,30,65.33
+Brokerage,AAPL,2025-12-01,5,210.00
+Brokerage,SGOV,2026-05-01,50,100.00
