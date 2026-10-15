@@ -32,7 +32,21 @@ function mcSetup() {
   d.insertChart(opt(d.newChart().setChartType(Charts.ChartType.LINE).addRange(h.getRange('A3:A400'))
     .addRange(h.getRange('D3:E400')).setNumHeaders(1).setPosition(top + 17, 8, 0, 0),
     'You vs benchmark (start = 100)').build());
-  ['Dashboard', 'Holdings', 'Value Sleeve', 'Watchlist', 'Daily Log', 'History', 'Control Center']
+  const pj = ss.getSheetByName('Projection');
+  if (pj) {
+    pj.getCharts().forEach(function (c) { pj.removeChart(c); });
+    const f = pj.createTextFinder('Years from today').findNext();
+    if (f) {
+      const r0 = f.getRow();
+      pj.insertChart(pj.newChart().setChartType(Charts.ChartType.LINE).addRange(pj.getRange(r0, 1, 12, 5))
+        .setNumHeaders(1).setPosition(4, 8, 0, 0).setOption('title', 'Household projection: next 10 years')
+        .setOption('width', 640).setOption('height', 380).setOption('legend', { position: 'bottom' })
+        .setOption('vAxis', { format: 'short' }).setOption('hAxis', { title: 'Years from today' })
+        .setOption('series', { 0: { color: '#d93025', lineDashStyle: [4, 4] }, 1: { color: '#1a73e8', lineWidth: 3 },
+                               2: { color: '#188038', lineDashStyle: [4, 4] }, 3: { color: '#9334e6' } }).build());
+    }
+  }
+  ['Dashboard', 'Holdings', 'Projection', 'Value Sleeve', 'Watchlist', 'Daily Log', 'History', 'Control Center']
     .forEach(function (n, i) { const s = ss.getSheetByName(n); if (s) { ss.setActiveSheet(s); ss.moveActiveSheet(i + 1); } });
   ss.setActiveSheet(d);
 }
