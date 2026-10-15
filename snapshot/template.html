@@ -106,11 +106,11 @@ tr.grp td{font-weight:700;background:var(--track);border-bottom:none}
 <script>
 const D=__DATA__;
 const SLEEVES=[
-  {k:"US",c:"--us",note:"SPUS, SCHG, value names"},
-  {k:"Intl",c:"--intl",note:"UMMA"},
-  {k:"Gold",c:"--gold",note:"GLDM"},
+  {k:"US",c:"--us",note:"US stock funds, value names"},
+  {k:"Intl",c:"--intl",note:"international stock funds"},
+  {k:"Gold",c:"--gold",note:"gold ETF"},
   {k:"T-bills",c:"--sgov",note:"SGOV / T-bills"},
-  {k:"Satellites",c:"--sat",note:"IBIT, SPCX, crypto, silver, Roth high-upside"},
+  {k:"Satellites",c:"--sat",note:"bitcoin, sector bets, sandboxes"},
   {k:"Cash",c:"--cash",note:"uninvested"}
 ].map(s=>({...s,t:D.targets[s.k]||0}));
 const A=D.accounts;
